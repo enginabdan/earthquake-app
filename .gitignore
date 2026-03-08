@@ -1,0 +1,23 @@
+# OS / editor
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+.pycache/
+.mplconfig/
+
+# Local data artifacts
+data/raw/*.parquet
+data/processed/*.parquet
+data/processed/*.csv
+
+# Trained artifacts
+models/*.joblib
+models/*.csv
+models/*.png
+models/*metrics.json
+models/location_models_meta.json
+
+# Notebook checkpoints
+.ipynb_checkpoints/

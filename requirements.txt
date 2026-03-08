@@ -1,0 +1,12 @@
+pandas
+numpy
+requests
+pyarrow
+spiceypy
+scikit-learn
+matplotlib
+ipywidgets
+streamlit
+folium
+streamlit-folium
+streamlit-geolocation
