@@ -11,6 +11,7 @@ __pycache__/
 data/raw/*.parquet
 data/processed/*.parquet
 data/processed/*.csv
+!data/raw/earthquakes_m4_2000_2026.parquet
 
 # Trained artifacts
 models/*.joblib
@@ -18,6 +19,13 @@ models/*.csv
 models/*.png
 models/*metrics.json
 models/location_models_meta.json
+!models/location_classifier.joblib
+!models/location_classifier_calibrator.joblib
+!models/location_classifier_ensemble.joblib
+!models/magnitude_regressor.joblib
+!models/magnitude_regressor_q10.joblib
+!models/magnitude_regressor_q90.joblib
+!models/location_models_meta.json
 
 # Notebook checkpoints
 .ipynb_checkpoints/
