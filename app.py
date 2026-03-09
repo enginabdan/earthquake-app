@@ -146,6 +146,10 @@ def _patch_missing_imputer_attrs(obj):
 
 _orig_imputer_transform = SimpleImputer.transform
 
+# Backward/forward compatibility for pickled imputers across sklearn versions.
+if not hasattr(SimpleImputer, "_fill_dtype"):
+    SimpleImputer._fill_dtype = np.dtype("float64")
+
 
 def _safe_imputer_transform(self, X):
     # Runtime compatibility for pickles created with a different sklearn minor version.
