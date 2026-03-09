@@ -243,6 +243,14 @@ def load_models():
     _patch_missing_imputer_attrs(reg)
     _patch_missing_imputer_attrs(reg_q10)
     _patch_missing_imputer_attrs(reg_q90)
+    # Hard compatibility path: bypass pipeline imputer objects entirely.
+    clf = _get_core_estimator(clf)
+    if hasattr(calibrator, "estimator"):
+        calibrator.estimator = _get_core_estimator(calibrator.estimator)
+    ensemble = [_get_core_estimator(m) for m in ensemble]
+    reg = _get_core_estimator(reg)
+    reg_q10 = _get_core_estimator(reg_q10)
+    reg_q90 = _get_core_estimator(reg_q90)
     feature_cols = json.loads((MODELS / "location_models_meta.json").read_text(encoding="utf-8"))["feature_columns"]
     return clf, calibrator, ensemble, reg, reg_q10, reg_q90, feature_cols
 
@@ -288,7 +296,8 @@ def build_location_predictions(lat: float, lon: float, start_utc: pd.Timestamp, 
     hist = compute_history_features(hist_input, eq, radius_km=300.0)
     df = pd.concat([df.reset_index(drop=True), hist.reset_index(drop=True)], axis=1)
 
-    X = df[feature_cols]
+    X = df[feature_cols].copy()
+    X = X.fillna(X.median(numeric_only=True))
     p_cal = _safe_calibrated_proba(calibrator, clf, X)
     ens_probs = np.vstack([_safe_predict_proba_1(m, X) for m in ensemble])
     p_std = ens_probs.std(axis=0)
@@ -357,7 +366,8 @@ def build_grid_predictions(
     hist = compute_history_features(hist_input, eq, radius_km=300.0)
     df = pd.concat([df.reset_index(drop=True), hist.reset_index(drop=True)], axis=1)
 
-    X = df[feature_cols]
+    X = df[feature_cols].copy()
+    X = X.fillna(X.median(numeric_only=True))
     p_cal = _safe_calibrated_proba(calibrator, clf, X)
     ens_probs = np.vstack([_safe_predict_proba_1(m, X) for m in ensemble])
     p_std = ens_probs.std(axis=0)
