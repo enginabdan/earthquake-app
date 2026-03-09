@@ -146,10 +146,23 @@ def _patch_missing_imputer_attrs(obj):
 
 
 _orig_imputer_transform = SimpleImputer.transform
+_orig_imputer_getattribute = SimpleImputer.__getattribute__
 
 # Backward/forward compatibility for pickled imputers across sklearn versions.
 if not hasattr(SimpleImputer, "_fill_dtype"):
     SimpleImputer._fill_dtype = np.dtype("float64")
+
+
+def _safe_imputer_getattribute(self, name):
+    if name == "_fill_dtype":
+        d = object.__getattribute__(self, "__dict__")
+        if "_fill_dtype" not in d:
+            d["_fill_dtype"] = np.dtype("float64")
+        return d["_fill_dtype"]
+    return _orig_imputer_getattribute(self, name)
+
+
+SimpleImputer.__getattribute__ = _safe_imputer_getattribute
 
 
 def _safe_imputer_transform(self, X):
