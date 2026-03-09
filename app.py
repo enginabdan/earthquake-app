@@ -30,8 +30,117 @@ from pipeline.train_location_models import location_features
 
 
 st.set_page_config(page_title="Earthquake Risk Demo", layout="wide")
-st.title("Earthquake Risk Demo")
-st.caption("This interface is a research prototype and does not provide exact earthquake predictions.")
+
+LANG_OPTIONS = [
+    "Almanca",
+    "Fransızca",
+    "İngilizce",
+    "İspanyolca",
+    "Rusça",
+    "Türkçe",
+]
+
+LANG_CODE = {
+    "Almanca": "de",
+    "Fransızca": "fr",
+    "İngilizce": "en",
+    "İspanyolca": "es",
+    "Rusça": "ru",
+    "Türkçe": "tr",
+}
+
+TXT = {
+    "title": {
+        "en": "Earthquake Risk Demo",
+        "de": "Erdbebenrisiko-Demo",
+        "fr": "Demo de risque sismique",
+        "es": "Demo de riesgo sísmico",
+        "ru": "Демо риска землетрясений",
+        "tr": "Deprem Risk Demosu",
+    },
+    "caption": {
+        "en": "This interface is a research prototype and does not provide exact earthquake predictions.",
+        "de": "Diese Oberfläche ist ein Forschungsprototyp und liefert keine exakten Erdbebenvorhersagen.",
+        "fr": "Cette interface est un prototype de recherche et ne fournit pas de prédictions exactes des tremblements de terre.",
+        "es": "Esta interfaz es un prototipo de investigación y no proporciona predicciones exactas de terremotos.",
+        "ru": "Этот интерфейс является исследовательским прототипом и не дает точных прогнозов землетрясений.",
+        "tr": "Bu arayüz bir araştırma prototipidir ve kesin deprem tahmini vermez.",
+    },
+    "language": {
+        "en": "Language",
+        "de": "Sprache",
+        "fr": "Langue",
+        "es": "Idioma",
+        "ru": "Язык",
+        "tr": "Dil",
+    },
+    "tab_location": {"en": "Location Forecast", "de": "Standortprognose", "fr": "Prévision du lieu", "es": "Pronóstico por ubicación", "ru": "Прогноз по местоположению", "tr": "Lokasyon Tahmini"},
+    "tab_grid": {"en": "Grid Heatmap", "de": "Raster-Wärmekarte", "fr": "Carte thermique en grille", "es": "Mapa de calor en cuadrícula", "ru": "Тепловая карта сетки", "tr": "Grid Isı Haritası"},
+    "location_help": {
+        "en": "Allow location access to center the map on your current position. You can click the map to refine the point.",
+        "de": "Erlaube den Standortzugriff, um die Karte auf deine aktuelle Position zu zentrieren. Du kannst auf die Karte klicken, um den Punkt zu verfeinern.",
+        "fr": "Autorisez l’accès à la localisation pour centrer la carte sur votre position actuelle. Vous pouvez cliquer sur la carte pour affiner le point.",
+        "es": "Permite el acceso a la ubicación para centrar el mapa en tu posición actual. Puedes hacer clic en el mapa para ajustar el punto.",
+        "ru": "Разрешите доступ к геолокации, чтобы центрировать карту на вашем текущем местоположении. Можно кликнуть по карте для уточнения точки.",
+        "tr": "Haritayı mevcut konumuna ortalamak için konum izni ver. Noktayı hassaslaştırmak için haritaya tıklayabilirsin.",
+    },
+    "install_geo": {
+        "en": "Install 'streamlit-geolocation' to auto-center the map on your current location.",
+        "de": "Installiere 'streamlit-geolocation', um die Karte automatisch auf deinen aktuellen Standort zu zentrieren.",
+        "fr": "Installez 'streamlit-geolocation' pour centrer automatiquement la carte sur votre position actuelle.",
+        "es": "Instala 'streamlit-geolocation' para centrar automáticamente el mapa en tu ubicación actual.",
+        "ru": "Установите 'streamlit-geolocation', чтобы автоматически центрировать карту на вашем текущем местоположении.",
+        "tr": "Haritayı mevcut konumuna otomatik ortalamak için 'streamlit-geolocation' kur.",
+    },
+    "selected_location": {"en": "Selected Location", "de": "Ausgewählter Standort", "fr": "Lieu sélectionné", "es": "Ubicación seleccionada", "ru": "Выбранное местоположение", "tr": "Seçili Konum"},
+    "lat_decimal": {"en": "Latitude (decimal)", "de": "Breitengrad (dezimal)", "fr": "Latitude (décimal)", "es": "Latitud (decimal)", "ru": "Широта (десятичная)", "tr": "Enlem (ondalık)"},
+    "lon_decimal": {"en": "Longitude (decimal)", "de": "Längengrad (dezimal)", "fr": "Longitude (décimal)", "es": "Longitud (decimal)", "ru": "Долгота (десятичная)", "tr": "Boylam (ondalık)"},
+    "topk": {"en": "Top-K", "de": "Top-K", "fr": "Top-K", "es": "Top-K", "ru": "Top-K", "tr": "Top-K"},
+    "min_gap": {"en": "Minimum gap between shown rows (minutes)", "de": "Mindestabstand zwischen angezeigten Zeilen (Minuten)", "fr": "Intervalle minimum entre les lignes affichées (minutes)", "es": "Separación mínima entre filas mostradas (minutos)", "ru": "Минимальный интервал между показанными строками (минуты)", "tr": "Gösterilen satırlar arası minimum fark (dakika)"},
+    "start_date": {"en": "Start date (UTC)", "de": "Startdatum (UTC)", "fr": "Date de début (UTC)", "es": "Fecha de inicio (UTC)", "ru": "Дата начала (UTC)", "tr": "Başlangıç tarihi (UTC)"},
+    "end_date": {"en": "End date (UTC)", "de": "Enddatum (UTC)", "fr": "Date de fin (UTC)", "es": "Fecha de fin (UTC)", "ru": "Дата окончания (UTC)", "tr": "Bitiş tarihi (UTC)"},
+    "range_warn": {"en": "The selected range is {days} days. Computation may take longer.", "de": "Der gewählte Bereich beträgt {days} Tage. Die Berechnung kann länger dauern.", "fr": "La plage sélectionnée est de {days} jours. Le calcul peut prendre plus de temps.", "es": "El rango seleccionado es de {days} días. El cálculo puede tardar más.", "ru": "Выбранный диапазон: {days} дней. Расчет может занять больше времени.", "tr": "Seçilen aralık {days} gün. Hesaplama daha uzun sürebilir."},
+    "run_forecast": {"en": "Run Forecast", "de": "Prognose ausführen", "fr": "Lancer la prévision", "es": "Ejecutar pronóstico", "ru": "Запустить прогноз", "tr": "Tahmini Çalıştır"},
+    "spinner_forecast": {"en": "Computing forecast, please wait...", "de": "Prognose wird berechnet, bitte warten...", "fr": "Calcul de la prévision, veuillez patienter...", "es": "Calculando pronóstico, por favor espera...", "ru": "Выполняется расчет прогноза, пожалуйста, подождите...", "tr": "Tahmin hesaplanıyor, lütfen bekleyin..."},
+    "no_rows": {"en": "No rows left after applying the minimum-gap filter. Reduce the gap and try again.", "de": "Nach dem Mindestabstandsfilter sind keine Zeilen übrig. Verringere den Abstand und versuche es erneut.", "fr": "Aucune ligne restante après application du filtre d’intervalle minimum. Réduisez l’intervalle et réessayez.", "es": "No quedan filas después de aplicar el filtro de separación mínima. Reduce la separación e inténtalo de nuevo.", "ru": "После применения фильтра минимального интервала строк не осталось. Уменьшите интервал и попробуйте снова.", "tr": "Minimum fark filtresi sonrası satır kalmadı. Farkı azaltıp tekrar dene."},
+    "forecast_done": {"en": "Forecast completed.", "de": "Prognose abgeschlossen.", "fr": "Prévision terminée.", "es": "Pronóstico completado.", "ru": "Прогноз завершен.", "tr": "Tahmin tamamlandı."},
+    "forecast_disclaimer": {"en": "This output is probabilistic research output, not a deterministic earthquake prediction. Use it only as an exploratory signal.", "de": "Dieses Ergebnis ist ein probabilistisches Forschungsergebnis und keine deterministische Erdbebenvorhersage. Verwende es nur als exploratives Signal.", "fr": "Ce résultat est une sortie probabiliste de recherche, pas une prédiction déterministe de séisme. Utilisez-le uniquement comme signal exploratoire.", "es": "Este resultado es una salida probabilística de investigación, no una predicción determinista de terremotos. Úsalo solo como señal exploratoria.", "ru": "Этот результат является вероятностным исследовательским выводом, а не детерминированным прогнозом землетрясения. Используйте его только как исследовательский сигнал.", "tr": "Bu çıktı olasılıksal bir araştırma çıktısıdır, deterministik deprem tahmini değildir. Sadece keşif amaçlı sinyal olarak kullan."},
+    "error": {"en": "Error", "de": "Fehler", "fr": "Erreur", "es": "Error", "ru": "Ошибка", "tr": "Hata"},
+    "risk_low": {"en": "Low", "de": "Niedrig", "fr": "Faible", "es": "Bajo", "ru": "Низкий", "tr": "Düşük"},
+    "risk_medium": {"en": "Medium", "de": "Mittel", "fr": "Moyen", "es": "Medio", "ru": "Средний", "tr": "Orta"},
+    "risk_high": {"en": "High", "de": "Hoch", "fr": "Élevé", "es": "Alto", "ru": "Высокий", "tr": "Yüksek"},
+    "grid_timestamp": {"en": "Grid timestamp (UTC)", "de": "Raster-Zeitstempel (UTC)", "fr": "Horodatage de la grille (UTC)", "es": "Marca temporal de la cuadrícula (UTC)", "ru": "Временная метка сетки (UTC)", "tr": "Grid zaman damgası (UTC)"},
+    "step_deg": {"en": "Step (degrees)", "de": "Schritt (Grad)", "fr": "Pas (degrés)", "es": "Paso (grados)", "ru": "Шаг (градусы)", "tr": "Adım (derece)"},
+    "lat_min": {"en": "Lat Min (DMS)", "de": "Min. Breite (DMS)", "fr": "Lat min (DMS)", "es": "Lat mín (DMS)", "ru": "Мин. широта (DMS)", "tr": "Enlem Min (DMS)"},
+    "lat_max": {"en": "Lat Max (DMS)", "de": "Max. Breite (DMS)", "fr": "Lat max (DMS)", "es": "Lat máx (DMS)", "ru": "Макс. широта (DMS)", "tr": "Enlem Max (DMS)"},
+    "lon_min": {"en": "Lon Min (DMS)", "de": "Min. Länge (DMS)", "fr": "Lon min (DMS)", "es": "Lon mín (DMS)", "ru": "Мин. долгота (DMS)", "tr": "Boylam Min (DMS)"},
+    "lon_max": {"en": "Lon Max (DMS)", "de": "Max. Länge (DMS)", "fr": "Lon max (DMS)", "es": "Lon máx (DMS)", "ru": "Макс. долгота (DMS)", "tr": "Boylam Max (DMS)"},
+    "generate_grid": {"en": "Generate Grid", "de": "Raster erzeugen", "fr": "Générer la grille", "es": "Generar cuadrícula", "ru": "Построить сетку", "tr": "Grid Üret"},
+    "spinner_grid": {"en": "Computing grid, please wait...", "de": "Raster wird berechnet, bitte warten...", "fr": "Calcul de la grille, veuillez patienter...", "es": "Calculando cuadrícula, por favor espera...", "ru": "Выполняется расчет сетки, пожалуйста, подождите...", "tr": "Grid hesaplanıyor, lütfen bekleyin..."},
+    "xlabel_lon": {"en": "Longitude", "de": "Längengrad", "fr": "Longitude", "es": "Longitud", "ru": "Долгота", "tr": "Boylam"},
+    "ylabel_lat": {"en": "Latitude", "de": "Breitengrad", "fr": "Latitude", "es": "Latitud", "ru": "Широта", "tr": "Enlem"},
+    "grid_title": {"en": "Grid Risk Heatmap", "de": "Raster-Risikowärmekarte", "fr": "Carte thermique du risque en grille", "es": "Mapa de calor de riesgo en cuadrícula", "ru": "Тепловая карта риска по сетке", "tr": "Grid Risk Isı Haritası"},
+    "cbar_label": {"en": "Calibrated P(M>=4)", "de": "Kalibriertes P(M>=4)", "fr": "P(M>=4) calibrée", "es": "P(M>=4) calibrada", "ru": "Калиброванная P(M>=4)", "tr": "Kalibre P(M>=4)"},
+}
+
+
+def tr(key: str, lang: str, **kwargs) -> str:
+    s = TXT.get(key, {}).get(lang, TXT.get(key, {}).get("en", key))
+    return s.format(**kwargs) if kwargs else s
+
+
+_hdr_l, _hdr_r = st.columns([0.78, 0.22])
+with _hdr_r:
+    lang_label = st.selectbox(
+        "Language",
+        options=LANG_OPTIONS,
+        index=LANG_OPTIONS.index("İngilizce"),
+        key="ui_lang_option",
+    )
+LANG = LANG_CODE[lang_label]
+
+st.title(tr("title", LANG))
+st.caption(tr("caption", LANG))
 
 
 @st.cache_resource
@@ -166,23 +275,23 @@ def build_grid_predictions(
     return df
 
 
-tab1, tab2 = st.tabs(["Location Forecast", "Grid Heatmap"])
+tab1, tab2 = st.tabs([tr("tab_location", LANG), tr("tab_grid", LANG)])
 
 with tab1:
-    st.subheader("Location Forecast")
+    st.subheader(tr("tab_location", LANG))
     if "selected_lat" not in st.session_state:
-        st.session_state["selected_lat"] = 39.93
+        st.session_state["selected_lat"] = 39.8283
     if "selected_lon" not in st.session_state:
-        st.session_state["selected_lon"] = 32.85
+        st.session_state["selected_lon"] = -98.5795
 
-    st.markdown("Allow location access to center the map on your current position. You can click the map to refine the point.")
+    st.markdown(tr("location_help", LANG))
     if streamlit_geolocation is not None:
         browser_loc = streamlit_geolocation()
         if browser_loc and browser_loc.get("latitude") is not None and browser_loc.get("longitude") is not None:
             st.session_state["selected_lat"] = float(browser_loc["latitude"])
             st.session_state["selected_lon"] = float(browser_loc["longitude"])
     else:
-        st.info("Install 'streamlit-geolocation' to auto-center the map on your current location.")
+        st.info(tr("install_geo", LANG))
 
     m = folium.Map(
         location=[st.session_state["selected_lat"], st.session_state["selected_lon"]],
@@ -192,7 +301,7 @@ with tab1:
     )
     folium.Marker(
         [st.session_state["selected_lat"], st.session_state["selected_lon"]],
-        tooltip="Selected Location",
+        tooltip=tr("selected_location", LANG),
     ).add_to(m)
     folium.LatLngPopup().add_to(m)
     map_data = st_folium(m, height=420, width=None, key="location_picker")
@@ -202,57 +311,52 @@ with tab1:
 
     lat = float(st.session_state["selected_lat"])
     lon = float(st.session_state["selected_lon"])
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Latitude (decimal)", f"{lat:.6f}")
-    c2.metric("Longitude (decimal)", f"{lon:.6f}")
-    c3.metric("Latitude (DMS)", format_lat_dms(lat))
-    c4.metric("Longitude (DMS)", format_lon_dms(lon))
+    c1, c2 = st.columns(2)
+    c1.metric(tr("lat_decimal", LANG), f"{lat:.6f}")
+    c2.metric(tr("lon_decimal", LANG), f"{lon:.6f}")
 
     c5, c6 = st.columns(2)
-    top_k = c5.number_input("Top-K", min_value=5, max_value=200, value=20, step=5)
-    min_gap_min = c6.number_input("Minimum gap between shown rows (minutes)", min_value=0, max_value=1440, value=360, step=30)
+    top_k = c5.number_input(tr("topk", LANG), min_value=5, max_value=200, value=20, step=5)
+    min_gap_min = c6.number_input(tr("min_gap", LANG), min_value=0, max_value=1440, value=360, step=30)
 
     d1, d2 = st.columns(2)
-    start_date = d1.date_input("Start date (UTC)", datetime(2026, 4, 1).date())
-    end_date = d2.date_input("End date (UTC)", datetime(2026, 4, 3).date())
+    start_date = d1.date_input(tr("start_date", LANG), datetime(2026, 4, 1).date())
+    end_date = d2.date_input(tr("end_date", LANG), datetime(2026, 4, 3).date())
     day_span = (end_date - start_date).days + 1
     if day_span > 31:
-        st.warning(f"The selected range is {day_span} days. Computation may take longer.")
+        st.warning(tr("range_warn", LANG, days=day_span))
 
-    if st.button("Run Forecast", type="primary"):
+    if st.button(tr("run_forecast", LANG), type="primary"):
         try:
             start_ts = pd.Timestamp(datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc))
             end_ts = pd.Timestamp(datetime.combine(end_date, datetime.min.time(), tzinfo=timezone.utc) + timedelta(hours=23, minutes=59))
-            with st.spinner("Computing forecast, please wait..."):
+            with st.spinner(tr("spinner_forecast", LANG)):
                 ranked = build_location_predictions(lat, lon, start_ts, end_ts, int(top_k))
                 out = pick_top_with_min_gap(ranked, int(top_k), int(min_gap_min))
                 if out.empty:
-                    st.warning("No rows left after applying the minimum-gap filter. Reduce the gap and try again.")
+                    st.warning(tr("no_rows", LANG))
                     st.stop()
 
                 out["uncertainty_width"] = out["p_eq_m4_plus_high95"] - out["p_eq_m4_plus_low95"]
                 out["risk_level"] = pd.cut(
                     out["p_eq_m4_plus"],
                     bins=[-0.001, 0.33, 0.66, 1.001],
-                    labels=["Low", "Medium", "High"],
+                    labels=[tr("risk_low", LANG), tr("risk_medium", LANG), tr("risk_high", LANG)],
                 )
                 out["confidence_level"] = pd.cut(
                     out["uncertainty_width"],
                     bins=[-0.001, 0.20, 0.40, 10.0],
-                    labels=["High", "Medium", "Low"],
+                    labels=[tr("risk_high", LANG), tr("risk_medium", LANG), tr("risk_low", LANG)],
                 )
 
-            st.success("Forecast completed.")
-            st.warning(
-                "This output is probabilistic research output, not a deterministic earthquake prediction. "
-                "Use it only as an exploratory signal."
-            )
+            st.success(tr("forecast_done", LANG))
+            st.warning(tr("forecast_disclaimer", LANG))
             st.dataframe(
                 out[
                     [
                         "time_utc",
-                        "latitude_dms",
-                        "longitude_dms",
+                        "latitude",
+                        "longitude",
                         "p_eq_m4_plus",
                         "p_eq_m4_plus_low95",
                         "p_eq_m4_plus_high95",
@@ -266,23 +370,23 @@ with tab1:
                 use_container_width=True,
             )
         except Exception as exc:
-            st.error(f"Error: {exc}")
+            st.error(f"{tr('error', LANG)}: {exc}")
 
 
 with tab2:
-    st.subheader("Grid Heatmap")
+    st.subheader(tr("tab_grid", LANG))
     g1, g2, g3 = st.columns(3)
-    grid_time = g1.text_input("Grid timestamp (UTC)", "2026-04-01T00:00:00Z")
-    step = g2.number_input("Step (degrees)", min_value=0.5, max_value=10.0, value=5.0, step=0.5)
-    grid_topk = g3.number_input("Top-K", min_value=5, max_value=500, value=20, step=5)
+    grid_time = g1.text_input(tr("grid_timestamp", LANG), "2026-04-01T00:00:00Z")
+    step = g2.number_input(tr("step_deg", LANG), min_value=0.5, max_value=10.0, value=5.0, step=0.5)
+    grid_topk = g3.number_input(tr("topk", LANG), min_value=5, max_value=500, value=20, step=5)
 
     b1, b2, b3, b4 = st.columns(4)
-    lat_min_in = b1.text_input("Lat Min (DMS)", "30.00.00N")
-    lat_max_in = b2.text_input("Lat Max (DMS)", "50.00.00N")
-    lon_min_in = b3.text_input("Lon Min (DMS)", "20.00.00E")
-    lon_max_in = b4.text_input("Lon Max (DMS)", "45.00.00E")
+    lat_min_in = b1.text_input(tr("lat_min", LANG), "30.00.00N")
+    lat_max_in = b2.text_input(tr("lat_max", LANG), "50.00.00N")
+    lon_min_in = b3.text_input(tr("lon_min", LANG), "20.00.00E")
+    lon_max_in = b4.text_input(tr("lon_max", LANG), "45.00.00E")
 
-    if st.button("Generate Grid"):
+    if st.button(tr("generate_grid", LANG)):
         try:
             ts = pd.Timestamp(grid_time)
             if ts.tzinfo is None:
@@ -295,16 +399,16 @@ with tab2:
             lon_min = parse_coordinate(lon_min_in, is_lat=False)
             lon_max = parse_coordinate(lon_max_in, is_lat=False)
 
-            with st.spinner("Computing grid, please wait..."):
+            with st.spinner(tr("spinner_grid", LANG)):
                 grid = build_grid_predictions(ts, lat_min, lat_max, lon_min, lon_max, float(step))
                 top = grid.sort_values("p_eq_m4_plus", ascending=False).head(int(grid_topk))
 
             fig, ax = plt.subplots(figsize=(10, 5))
             sc = ax.scatter(grid["longitude"], grid["latitude"], c=grid["p_eq_m4_plus"], cmap="inferno", s=55, alpha=0.9)
-            ax.set_xlabel("Longitude")
-            ax.set_ylabel("Latitude")
-            ax.set_title("Grid Risk Heatmap")
-            plt.colorbar(sc, ax=ax, label="Calibrated P(M>=4)")
+            ax.set_xlabel(tr("xlabel_lon", LANG))
+            ax.set_ylabel(tr("ylabel_lat", LANG))
+            ax.set_title(tr("grid_title", LANG))
+            plt.colorbar(sc, ax=ax, label=tr("cbar_label", LANG))
             st.pyplot(fig, clear_figure=True, use_container_width=True)
 
             st.dataframe(
@@ -321,4 +425,4 @@ with tab2:
                 use_container_width=True,
             )
         except Exception as exc:
-            st.error(f"Error: {exc}")
+            st.error(f"{tr('error', LANG)}: {exc}")
