@@ -163,6 +163,8 @@ SimpleImputer.transform = _safe_imputer_transform
 
 
 def _get_core_estimator(model):
+    if hasattr(model, "estimator"):
+        return model.estimator
     if isinstance(model, Pipeline):
         if "clf" in model.named_steps:
             return model.named_steps["clf"]
@@ -189,6 +191,15 @@ def _safe_predict(model, X):
             raise
         core = _get_core_estimator(model)
         return core.predict(X)
+
+
+def _safe_calibrated_proba(calibrator, fallback_model, X):
+    try:
+        return calibrator.predict_proba(X)[:, 1]
+    except AttributeError as exc:
+        if "_fill_dtype" not in str(exc):
+            raise
+        return _safe_predict_proba_1(fallback_model, X)
 
 
 _hdr_l, _hdr_r = st.columns([0.78, 0.22])
@@ -265,7 +276,7 @@ def build_location_predictions(lat: float, lon: float, start_utc: pd.Timestamp, 
     df = pd.concat([df.reset_index(drop=True), hist.reset_index(drop=True)], axis=1)
 
     X = df[feature_cols]
-    p_cal = _safe_predict_proba_1(calibrator, X)
+    p_cal = _safe_calibrated_proba(calibrator, clf, X)
     ens_probs = np.vstack([_safe_predict_proba_1(m, X) for m in ensemble])
     p_std = ens_probs.std(axis=0)
 
@@ -334,7 +345,7 @@ def build_grid_predictions(
     df = pd.concat([df.reset_index(drop=True), hist.reset_index(drop=True)], axis=1)
 
     X = df[feature_cols]
-    p_cal = _safe_predict_proba_1(calibrator, X)
+    p_cal = _safe_calibrated_proba(calibrator, clf, X)
     ens_probs = np.vstack([_safe_predict_proba_1(m, X) for m in ensemble])
     p_std = ens_probs.std(axis=0)
 
