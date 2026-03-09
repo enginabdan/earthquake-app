@@ -144,6 +144,19 @@ def _patch_missing_imputer_attrs(obj):
             _patch_missing_imputer_attrs(v)
 
 
+_orig_imputer_transform = SimpleImputer.transform
+
+
+def _safe_imputer_transform(self, X):
+    # Runtime compatibility for pickles created with a different sklearn minor version.
+    if not hasattr(self, "_fill_dtype"):
+        self._fill_dtype = np.dtype("float64")
+    return _orig_imputer_transform(self, X)
+
+
+SimpleImputer.transform = _safe_imputer_transform
+
+
 _hdr_l, _hdr_r = st.columns([0.78, 0.22])
 with _hdr_r:
     lang_label = st.selectbox(
