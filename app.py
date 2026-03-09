@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import folium
+from sklearn.impute import SimpleImputer
 from streamlit_folium import st_folium
 try:
     from streamlit_geolocation import streamlit_geolocation
@@ -129,6 +130,20 @@ def tr(key: str, lang: str, **kwargs) -> str:
     return s.format(**kwargs) if kwargs else s
 
 
+def _patch_missing_imputer_attrs(obj):
+    if isinstance(obj, SimpleImputer) and not hasattr(obj, "_fill_dtype"):
+        obj._fill_dtype = np.dtype("float64")
+    if hasattr(obj, "__dict__"):
+        for v in obj.__dict__.values():
+            _patch_missing_imputer_attrs(v)
+    if isinstance(obj, dict):
+        for v in obj.values():
+            _patch_missing_imputer_attrs(v)
+    if isinstance(obj, (list, tuple, set)):
+        for v in obj:
+            _patch_missing_imputer_attrs(v)
+
+
 _hdr_l, _hdr_r = st.columns([0.78, 0.22])
 with _hdr_r:
     lang_label = st.selectbox(
@@ -151,6 +166,12 @@ def load_models():
     reg = joblib.load(MODELS / "magnitude_regressor.joblib")
     reg_q10 = joblib.load(MODELS / "magnitude_regressor_q10.joblib")
     reg_q90 = joblib.load(MODELS / "magnitude_regressor_q90.joblib")
+    _patch_missing_imputer_attrs(clf)
+    _patch_missing_imputer_attrs(calibrator)
+    _patch_missing_imputer_attrs(ensemble)
+    _patch_missing_imputer_attrs(reg)
+    _patch_missing_imputer_attrs(reg_q10)
+    _patch_missing_imputer_attrs(reg_q90)
     feature_cols = json.loads((MODELS / "location_models_meta.json").read_text(encoding="utf-8"))["feature_columns"]
     return clf, calibrator, ensemble, reg, reg_q10, reg_q90, feature_cols
 
