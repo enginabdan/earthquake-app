@@ -22,17 +22,26 @@ def compute_history_features(
     catalog: pd.DataFrame,
     radius_km: float = 300.0,
 ) -> pd.DataFrame:
-    """Causal features: only events strictly before sample time are used."""
+    """Causal features using a bounded 365-day lookback window per sample."""
     cat = catalog[["time_utc", "latitude", "longitude", "magnitude"]].copy()
-    cat["time_utc"] = pd.to_datetime(cat["time_utc"], utc=True)
-    cat = cat.sort_values("time_utc")
+    cat["time_utc"] = pd.to_datetime(cat["time_utc"], utc=True).dt.tz_localize(None)
+    cat = cat.sort_values("time_utc", kind="mergesort").reset_index(drop=True)
+
+    cat_t = cat["time_utc"].to_numpy(dtype="datetime64[ns]")
+    cat_lat = cat["latitude"].to_numpy(dtype=np.float64)
+    cat_lon = cat["longitude"].to_numpy(dtype=np.float64)
+    cat_mag = cat["magnitude"].to_numpy(dtype=np.float64)
+
+    s = samples[["time_utc", "latitude", "longitude"]].copy()
+    s["time_utc"] = pd.to_datetime(s["time_utc"], utc=True).dt.tz_localize(None)
 
     out = []
-    for r in samples.itertuples(index=False):
-        t = pd.Timestamp(r.time_utc)
-        prior = cat[cat["time_utc"] < t]
+    lookback = np.timedelta64(365, "D")
 
-        if prior.empty:
+    for r in s.itertuples(index=False):
+        t = np.datetime64(r.time_utc.to_datetime64(), "ns")
+        right = np.searchsorted(cat_t, t, side="left")
+        if right <= 0:
             out.append(
                 {
                     "hist_cnt_r300_1d": 0,
@@ -46,10 +55,8 @@ def compute_history_features(
             )
             continue
 
-        dkm = haversine_km(r.latitude, r.longitude, prior["latitude"].values, prior["longitude"].values)
-        local = prior[dkm <= radius_km].copy()
-
-        if local.empty:
+        left = np.searchsorted(cat_t, t - lookback, side="left")
+        if left >= right:
             out.append(
                 {
                     "hist_cnt_r300_1d": 0,
@@ -63,30 +70,54 @@ def compute_history_features(
             )
             continue
 
-        dt_days = (t - local["time_utc"]).dt.total_seconds() / 86400.0
+        sl_lat = cat_lat[left:right]
+        sl_lon = cat_lon[left:right]
+        sl_t = cat_t[left:right]
+        sl_mag = cat_mag[left:right]
 
-        w1 = dt_days <= 1
-        w7 = dt_days <= 7
-        w30 = dt_days <= 30
-        w365 = dt_days <= 365
+        dkm = haversine_km(float(r.latitude), float(r.longitude), sl_lat, sl_lon)
+        m_local = dkm <= radius_km
 
-        local365 = local[w365]
-        if local365.empty:
+        if not np.any(m_local):
+            out.append(
+                {
+                    "hist_cnt_r300_1d": 0,
+                    "hist_cnt_r300_7d": 0,
+                    "hist_cnt_r300_30d": 0,
+                    "hist_cnt_r300_365d": 0,
+                    "hist_maxmag_r300_365d": 0.0,
+                    "hist_meanmag_r300_365d": 0.0,
+                    "hist_days_since_last_r300": 9999.0,
+                }
+            )
+            continue
+
+        local_t = sl_t[m_local]
+        local_mag = sl_mag[m_local]
+        dt_days = (t - local_t) / np.timedelta64(1, "D")
+
+        w1 = dt_days <= 1.0
+        w7 = dt_days <= 7.0
+        w30 = dt_days <= 30.0
+        w365 = dt_days <= 365.0
+
+        if np.any(w365):
+            mag365 = local_mag[w365]
+            maxmag = float(np.max(mag365))
+            meanmag = float(np.mean(mag365))
+        else:
             maxmag = 0.0
             meanmag = 0.0
-        else:
-            maxmag = float(local365["magnitude"].max())
-            meanmag = float(local365["magnitude"].mean())
 
         out.append(
             {
-                "hist_cnt_r300_1d": int(w1.sum()),
-                "hist_cnt_r300_7d": int(w7.sum()),
-                "hist_cnt_r300_30d": int(w30.sum()),
-                "hist_cnt_r300_365d": int(w365.sum()),
+                "hist_cnt_r300_1d": int(np.sum(w1)),
+                "hist_cnt_r300_7d": int(np.sum(w7)),
+                "hist_cnt_r300_30d": int(np.sum(w30)),
+                "hist_cnt_r300_365d": int(np.sum(w365)),
                 "hist_maxmag_r300_365d": maxmag,
                 "hist_meanmag_r300_365d": meanmag,
-                "hist_days_since_last_r300": float(dt_days.min()),
+                "hist_days_since_last_r300": float(np.min(dt_days)) if dt_days.size else 9999.0,
             }
         )
 

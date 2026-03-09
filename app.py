@@ -157,8 +157,14 @@ def load_models():
 
 @st.cache_data
 def load_eq_catalog():
-    eq = pd.read_parquet(DATA_RAW / "earthquakes_m4_2000_2026.parquet")
+    eq = pd.read_parquet(
+        DATA_RAW / "earthquakes_m4_2000_2026.parquet",
+        columns=["time_utc", "latitude", "longitude", "magnitude"],
+    )
     eq["time_utc"] = pd.to_datetime(eq["time_utc"], utc=True).dt.floor("min")
+    eq["latitude"] = eq["latitude"].astype("float32")
+    eq["longitude"] = eq["longitude"].astype("float32")
+    eq["magnitude"] = eq["magnitude"].astype("float32")
     return eq
 
 
@@ -328,6 +334,9 @@ with tab1:
 
     if st.button(tr("run_forecast", LANG), type="primary"):
         try:
+            if day_span > 31:
+                st.error(f"{tr('error', LANG)}: please select at most 31 days for one request.")
+                st.stop()
             start_ts = pd.Timestamp(datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc))
             end_ts = pd.Timestamp(datetime.combine(end_date, datetime.min.time(), tzinfo=timezone.utc) + timedelta(hours=23, minutes=59))
             with st.spinner(tr("spinner_forecast", LANG)):
