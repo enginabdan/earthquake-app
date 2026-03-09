@@ -89,10 +89,13 @@ def decimal_to_dms(value: float, is_lat: bool) -> tuple[int, int, float, str]:
 def format_dms(value: float, is_lat: bool) -> str:
     deg, minute, second, hemi = decimal_to_dms(value, is_lat)
     sec_int = int(round(second))
-    if abs(second - sec_int) < 1e-9:
-        sec_txt = f"{sec_int:02d}"
-    else:
-        sec_txt = f"{second:05.2f}".rstrip("0").rstrip(".")
+    if sec_int >= 60:
+        sec_int = 0
+        minute += 1
+    if minute >= 60:
+        minute = 0
+        deg += 1
+    sec_txt = f"{sec_int:02d}"
     return f"{deg}.{minute:02d}.{sec_txt}{hemi}"
 
 

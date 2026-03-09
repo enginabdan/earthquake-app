@@ -32,21 +32,21 @@ from pipeline.train_location_models import location_features
 st.set_page_config(page_title="Earthquake Risk Demo", layout="wide")
 
 LANG_OPTIONS = [
-    "Almanca",
-    "Fransızca",
-    "İngilizce",
-    "İspanyolca",
-    "Rusça",
+    "Deutsch",
+    "English",
+    "Español",
+    "Français",
     "Türkçe",
+    "Русский",
 ]
 
 LANG_CODE = {
-    "Almanca": "de",
-    "Fransızca": "fr",
-    "İngilizce": "en",
-    "İspanyolca": "es",
-    "Rusça": "ru",
+    "Deutsch": "de",
+    "English": "en",
+    "Español": "es",
+    "Français": "fr",
     "Türkçe": "tr",
+    "Русский": "ru",
 }
 
 TXT = {
@@ -134,7 +134,7 @@ with _hdr_r:
     lang_label = st.selectbox(
         "Language",
         options=LANG_OPTIONS,
-        index=LANG_OPTIONS.index("İngilizce"),
+        index=LANG_OPTIONS.index("English"),
         key="ui_lang_option",
     )
 LANG = LANG_CODE[lang_label]
@@ -312,8 +312,8 @@ with tab1:
     lat = float(st.session_state["selected_lat"])
     lon = float(st.session_state["selected_lon"])
     c1, c2 = st.columns(2)
-    c1.metric(tr("lat_decimal", LANG), f"{lat:.6f}")
-    c2.metric(tr("lon_decimal", LANG), f"{lon:.6f}")
+    c1.metric("Latitude (DMS)", format_lat_dms(lat))
+    c2.metric("Longitude (DMS)", format_lon_dms(lon))
 
     c5, c6 = st.columns(2)
     top_k = c5.number_input(tr("topk", LANG), min_value=5, max_value=200, value=20, step=5)
@@ -355,8 +355,8 @@ with tab1:
                 out[
                     [
                         "time_utc",
-                        "latitude",
-                        "longitude",
+                        "latitude_dms",
+                        "longitude_dms",
                         "p_eq_m4_plus",
                         "p_eq_m4_plus_low95",
                         "p_eq_m4_plus_high95",
