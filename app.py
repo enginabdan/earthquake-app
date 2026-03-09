@@ -12,6 +12,7 @@ import pandas as pd
 import streamlit as st
 import folium
 from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
 from streamlit_folium import st_folium
 try:
     from streamlit_geolocation import streamlit_geolocation
@@ -161,6 +162,35 @@ def _safe_imputer_transform(self, X):
 SimpleImputer.transform = _safe_imputer_transform
 
 
+def _get_core_estimator(model):
+    if isinstance(model, Pipeline):
+        if "clf" in model.named_steps:
+            return model.named_steps["clf"]
+        if "reg" in model.named_steps:
+            return model.named_steps["reg"]
+    return model
+
+
+def _safe_predict_proba_1(model, X):
+    try:
+        return model.predict_proba(X)[:, 1]
+    except AttributeError as exc:
+        if "_fill_dtype" not in str(exc):
+            raise
+        core = _get_core_estimator(model)
+        return core.predict_proba(X)[:, 1]
+
+
+def _safe_predict(model, X):
+    try:
+        return model.predict(X)
+    except AttributeError as exc:
+        if "_fill_dtype" not in str(exc):
+            raise
+        core = _get_core_estimator(model)
+        return core.predict(X)
+
+
 _hdr_l, _hdr_r = st.columns([0.78, 0.22])
 with _hdr_r:
     lang_label = st.selectbox(
@@ -235,16 +265,16 @@ def build_location_predictions(lat: float, lon: float, start_utc: pd.Timestamp, 
     df = pd.concat([df.reset_index(drop=True), hist.reset_index(drop=True)], axis=1)
 
     X = df[feature_cols]
-    p_cal = calibrator.predict_proba(X)[:, 1]
-    ens_probs = np.vstack([m.predict_proba(X)[:, 1] for m in ensemble])
+    p_cal = _safe_predict_proba_1(calibrator, X)
+    ens_probs = np.vstack([_safe_predict_proba_1(m, X) for m in ensemble])
     p_std = ens_probs.std(axis=0)
 
     df["p_eq_m4_plus"] = p_cal
     df["p_eq_m4_plus_low95"] = np.clip(p_cal - 1.96 * p_std, 0.0, 1.0)
     df["p_eq_m4_plus_high95"] = np.clip(p_cal + 1.96 * p_std, 0.0, 1.0)
-    df["pred_magnitude_if_event"] = reg.predict(X)
-    df["pred_magnitude_q10"] = reg_q10.predict(X)
-    df["pred_magnitude_q90"] = reg_q90.predict(X)
+    df["pred_magnitude_if_event"] = _safe_predict(reg, X)
+    df["pred_magnitude_q10"] = _safe_predict(reg_q10, X)
+    df["pred_magnitude_q90"] = _safe_predict(reg_q90, X)
     df["latitude_dms"] = format_lat_dms(lat)
     df["longitude_dms"] = format_lon_dms(lon)
 
@@ -304,16 +334,16 @@ def build_grid_predictions(
     df = pd.concat([df.reset_index(drop=True), hist.reset_index(drop=True)], axis=1)
 
     X = df[feature_cols]
-    p_cal = calibrator.predict_proba(X)[:, 1]
-    ens_probs = np.vstack([m.predict_proba(X)[:, 1] for m in ensemble])
+    p_cal = _safe_predict_proba_1(calibrator, X)
+    ens_probs = np.vstack([_safe_predict_proba_1(m, X) for m in ensemble])
     p_std = ens_probs.std(axis=0)
 
     df["p_eq_m4_plus"] = p_cal
     df["p_eq_m4_plus_low95"] = np.clip(p_cal - 1.96 * p_std, 0.0, 1.0)
     df["p_eq_m4_plus_high95"] = np.clip(p_cal + 1.96 * p_std, 0.0, 1.0)
-    df["pred_magnitude_if_event"] = reg.predict(X)
-    df["pred_magnitude_q10"] = reg_q10.predict(X)
-    df["pred_magnitude_q90"] = reg_q90.predict(X)
+    df["pred_magnitude_if_event"] = _safe_predict(reg, X)
+    df["pred_magnitude_q10"] = _safe_predict(reg_q10, X)
+    df["pred_magnitude_q90"] = _safe_predict(reg_q90, X)
     df["latitude_dms"] = df["latitude"].apply(format_lat_dms)
     df["longitude_dms"] = df["longitude"].apply(format_lon_dms)
     return df
