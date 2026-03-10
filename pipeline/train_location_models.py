@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
+from sklearn.frozen import FrozenEstimator
 from sklearn.impute import SimpleImputer
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import brier_score_loss, mean_absolute_error, roc_auc_score
@@ -155,7 +156,7 @@ def main():
     clf.fit(X_core, y_core)
     p_raw = clf.predict_proba(X_test)[:, 1]
 
-    calibrator = CalibratedClassifierCV(clf, method="isotonic", cv="prefit")
+    calibrator = CalibratedClassifierCV(FrozenEstimator(clf), method="isotonic")
     calibrator.fit(X_cal, y_cal)
     p_cal = calibrator.predict_proba(X_test)[:, 1]
 

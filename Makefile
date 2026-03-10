@@ -1,5 +1,7 @@
-PY := python3
+PY := $(if $(wildcard .venv/bin/python),$(CURDIR)/.venv/bin/python,python3)
 PIP := $(PY) -m pip
+MPLCONFIGDIR ?= $(CURDIR)/.mplconfig
+export MPLCONFIGDIR
 
 PIPE := pipeline
 

@@ -13,7 +13,6 @@ Koordinat formati tum projede DMS olarak kullanilabilir:
 - `data/`: ham ve islenmis veri
 - `models/`: egitilmis modeller ve metrikler
 - `mine/`: demo notebook'lar
-- `PROJECT_REBUILD_TR.md`: teknik yol haritasi ve notlar
 
 ## Kurulum
 
@@ -81,49 +80,34 @@ Acilan arayuzde:
 
 ## 7/24 Canli Yayin (Ayni UI ile)
 
-Bu proje icin asagidaki deployment dosyalari eklendi:
-- `Dockerfile`
-- `docker-compose.yml`
-- `deploy/nginx/nginx.conf`
-- `deploy/systemd/earthquake-streamlit.service`
-- `deploy/scripts/deploy.sh`
+### Render Uzerinden Yayin
 
-1) Sunucuda proje klasorunu ac:
+Bu repo Render Blueprint ile yayinlanabilir (`render.yaml`):
 
-```bash
-cd /opt/earthquake
-```
+1) Render'da **New + -> Blueprint** sec
+2) Bu GitHub reposunu bagla
+3) `earthquake-app` web service olustugunda deploy et
+4) Canli URL: `https://<render-service>.onrender.com`
 
-2) SSL sertifika yollarini ve domain'i vererek stack'i kaldir:
+### GoDaddy DNS (Custom Domain)
 
-```bash
-DOMAIN=app.yourdomain.com \
-CERT_FULLCHAIN=/etc/letsencrypt/live/app.yourdomain.com/fullchain.pem \
-CERT_PRIVKEY=/etc/letsencrypt/live/app.yourdomain.com/privkey.pem \
-./deploy/scripts/deploy.sh
-```
+Render dashboard -> Settings -> Custom Domains:
 
-3) Mevcut web sitende iframe ile goster:
+1) Domain ekle (ornek: `app.senin-domain.com`)
+2) Render'in verdigi hedefe GoDaddy'de `CNAME` ac:
+   - Host: `app`
+   - Type: `CNAME`
+   - Points to: Render'in verdigi hedef (`xxxxx.onrender.com`)
+3) SSL Render tarafinda otomatik aktif olur (DNS propagate sonrasi)
+
+### Google Sites Icine Gommek
+
+Google Sites sayfasinda Embed -> URL:
 
 ```html
-<iframe
-  src="https://app.yourdomain.com"
-  style="width:100%;height:100vh;border:0;"
-  loading="lazy"
-></iframe>
-```
-
-Opsiyonel systemd:
-
-```bash
-sudo cp deploy/systemd/earthquake-streamlit.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable earthquake-streamlit
-sudo systemctl start earthquake-streamlit
+https://app.senin-domain.com
 ```
 
 ## Notebook'lar
 
-- `mine/interactive_prediction.ipynb`: form tabanli tahmin ve grid heatmap
-- `mine/one_click_prediction.ipynb`: tek hucrede tahmin
-- `mine/location_predict_demo.ipynb`: CLI tabanli demo
+Notebook'lar temizlendi. Uygulama ve tum akislar `make` komutlari ve `app.py` uzerinden calisir.

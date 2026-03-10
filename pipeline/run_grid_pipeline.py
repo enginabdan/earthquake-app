@@ -1,6 +1,7 @@
 import argparse
 import os
 import shlex
+import sys
 from pathlib import Path
 
 
@@ -29,8 +30,10 @@ def main():
     def q(v: object) -> str:
         return shlex.quote(str(v))
 
+    py = q(sys.executable)
+
     cmd_pred = (
-        f"python3 {q(this_dir / 'predict_grid_risk.py')} "
+        f"{py} {q(this_dir / 'predict_grid_risk.py')} "
         f"--time {q(args.time)} "
         f"--lat-min {q(args.lat_min)} --lat-max {q(args.lat_max)} "
         f"--lon-min {q(args.lon_min)} --lon-max {q(args.lon_max)} "
@@ -39,7 +42,7 @@ def main():
 
     cmd_plot = (
         f"MPLBACKEND=Agg MPLCONFIGDIR={q(this_dir.parent / '.mplconfig')} "
-        f"python3 {q(this_dir / 'render_grid_heatmap.py')} "
+        f"{py} {q(this_dir / 'render_grid_heatmap.py')} "
         f"--in {q(out_csv)} --out {q(out_png)} --title {q(args.title)}"
     )
 
